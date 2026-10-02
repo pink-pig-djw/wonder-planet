@@ -1,0 +1,203 @@
+<title>奇想星球</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bangers&family=ZCOOL+KuaiLe&display=swap">
+<style>
+/* Layout: full-bleed WebGL stage; comic-panel HUD pinned to the corners, toolbar along the bottom edge */
+:root {
+  --space: #0c0a1f;
+  --paper: #fff7e3;
+  --ink: #1d1631;
+  --sun: #ffd23f;
+  --bubblegum: #ff6b9a;
+  --sky: #4cc9f0;
+  --leaf: #7bd389;
+  --muted: #6b5f86;
+  --font-display: "ZCOOL KuaiLe", "Bangers", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  --font-latin: "Bangers", "ZCOOL KuaiLe", Impact, "Arial Black", sans-serif;
+  --font-body: "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Noto Sans SC", system-ui, sans-serif;
+  --gutter: 16px;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+[hidden] { display: none !important; }
+body {
+  margin: 0; overflow: hidden; background: var(--space); color: var(--ink);
+  font-family: var(--font-body); -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent; user-select: none; -webkit-user-select: none;
+}
+#stage { position: fixed; inset: 0; }
+#stage canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: grab; }
+#stage canvas:active { cursor: grabbing; }
+.hud { position: fixed; z-index: 5; pointer-events: none; }
+.hud > * { pointer-events: auto; }
+
+/* ---------- title card ---------- */
+.title {
+  top: calc(var(--gutter) + env(safe-area-inset-top, 0px)); left: var(--gutter);
+  display: flex; flex-direction: column; gap: 4px; align-items: flex-start;
+}
+.title h1 {
+  margin: 0; font-family: var(--font-display); font-weight: 400; font-size: clamp(26px, 4.2vw, 40px); line-height: 1;
+  background: var(--sun); color: var(--ink); padding: 8px 14px 6px; border: 3px solid var(--ink);
+  box-shadow: 5px 5px 0 var(--ink); transform: rotate(-2.5deg); letter-spacing: 2px;
+}
+.title p {
+  margin: 6px 0 0 10px; font-family: var(--font-latin); font-size: 15px; letter-spacing: 1.5px; color: var(--paper);
+  background: var(--bubblegum); padding: 3px 10px 2px; border: 2px solid var(--ink); transform: rotate(1.5deg);
+  box-shadow: 3px 3px 0 var(--ink);
+}
+
+/* ---------- top-right toggles ---------- */
+.toggles {
+  top: calc(var(--gutter) + env(safe-area-inset-top, 0px)); right: var(--gutter);
+  display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; max-width: min(320px, 55vw);
+}
+.chip, .tool {
+  font-family: var(--font-display); font-size: 15px; color: var(--ink); background: var(--paper);
+  border: 2.5px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 6px 11px 5px; border-radius: 10px;
+  cursor: pointer; line-height: 1.1; transition: transform .08s ease, box-shadow .08s ease, background .15s;
+}
+.chip:hover, .tool:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--ink); }
+.chip:active, .tool:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.chip[aria-pressed="true"] { background: var(--leaf); }
+.chip:focus-visible, .tool:focus-visible, .bubble button:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+
+/* ---------- bottom toolbar ---------- */
+.toolbar {
+  left: 50%; transform: translateX(-50%); bottom: calc(var(--gutter) + env(safe-area-inset-bottom, 0px));
+  display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px;
+  width: max-content; max-width: calc(100vw - 2 * var(--gutter));
+  background: rgba(255, 247, 227, 0.12); border: 2px dashed rgba(255, 247, 227, 0.35); border-radius: 16px; padding: 8px 10px;
+  backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+}
+.toolbar .lab { font-family: var(--font-display); color: var(--paper); font-size: 15px; padding: 0 2px 0 4px; }
+.tool { display: inline-flex; align-items: center; gap: 6px; }
+.tool i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--ink); display: inline-block; }
+.tool.home { background: var(--sun); }
+.tool[aria-pressed="true"] { background: var(--sky); }
+
+/* ---------- follow caption (speech bubble) ---------- */
+.bubble {
+  top: calc(var(--gutter) + 72px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+  background: var(--paper); border: 3px solid var(--ink); border-radius: 18px; box-shadow: 5px 5px 0 var(--ink);
+  padding: 10px 14px 10px 16px; display: flex; gap: 12px; align-items: center; max-width: calc(100vw - 2 * var(--gutter));
+}
+.bubble::after {
+  content: ""; position: absolute; left: 28px; bottom: -14px; width: 18px; height: 18px; background: var(--paper);
+  border-right: 3px solid var(--ink); border-bottom: 3px solid var(--ink); transform: rotate(45deg) skew(8deg, 8deg);
+}
+.bubble .txt { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.bubble b { font-family: var(--font-display); font-weight: 400; font-size: 19px; color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bubble span { font-size: 13px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.bubble button {
+  font-family: var(--font-display); font-size: 14px; border: 2px solid var(--ink); background: var(--bubblegum); color: var(--paper);
+  border-radius: 8px; padding: 4px 9px; cursor: pointer; box-shadow: 2px 2px 0 var(--ink); flex: none;
+}
+
+/* ---------- hint ---------- */
+.hint {
+  left: var(--gutter); bottom: calc(var(--gutter) + 70px + env(safe-area-inset-bottom, 0px));
+  color: var(--paper); font-size: 13px; line-height: 1.6; opacity: .85; max-width: 320px; pointer-events: none;
+  text-shadow: 0 1px 0 var(--ink), 0 0 6px rgba(0,0,0,.6); transition: opacity .8s;
+}
+.hint kbd { font-family: var(--font-display); background: var(--paper); color: var(--ink); border: 1.5px solid var(--ink); border-radius: 5px; padding: 0 5px; font-size: 12px; }
+
+/* ---------- city labels ---------- */
+#labels { position: fixed; inset: 0; pointer-events: none; z-index: 4; overflow: hidden; }
+.city {
+  position: absolute; left: 0; top: 0; transform-origin: 50% 100%; pointer-events: auto; cursor: pointer;
+  font-family: var(--font-display); font-size: 15px; color: var(--ink); white-space: nowrap;
+  background: var(--paper); border: 2.5px solid var(--ink); border-radius: 10px; padding: 3px 9px 2px;
+  box-shadow: 3px 3px 0 var(--ink); will-change: transform, opacity; touch-action: none;
+}
+.city:focus-visible { outline: 3px solid var(--sky); outline-offset: 2px; }
+.city small { display: block; font-family: var(--font-latin); font-size: 10.5px; letter-spacing: 1.2px; color: var(--muted); line-height: 1; margin-top: 1px; }
+.city::after {
+  content: ""; position: absolute; left: 50%; bottom: -9px; width: 10px; height: 10px; margin-left: -5px; background: var(--paper);
+  border-right: 2.5px solid var(--ink); border-bottom: 2.5px solid var(--ink); transform: rotate(45deg);
+}
+
+/* ---------- loader ---------- */
+.loader {
+  position: fixed; inset: 0; z-index: 20; display: grid; place-items: center; background: var(--space);
+  transition: opacity .6s ease; color: var(--paper);
+}
+.loader div { display: flex; flex-direction: column; align-items: center; gap: 14px; font-family: var(--font-display); font-size: 22px; }
+.loader .dots { display: flex; gap: 10px; }
+.loader .dots span { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--ink); background: var(--sun); animation: hop 0.9s infinite ease-in-out; }
+.loader .dots span:nth-child(2) { background: var(--bubblegum); animation-delay: .15s; }
+.loader .dots span:nth-child(3) { background: var(--sky); animation-delay: .3s; }
+@keyframes hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+.loader.done { opacity: 0; pointer-events: none; }
+.err { color: var(--bubblegum); font-size: 15px; max-width: 80vw; text-align: center; font-family: var(--font-body); }
+
+@media (max-width: 640px) {
+  .title h1 { font-size: 26px; }
+  .title p { font-size: 12px; }
+  .toggles { max-width: 46vw; gap: 6px; }
+  .chip { font-size: 13px; padding: 5px 8px 4px; }
+  .tool { font-size: 13px; padding: 5px 8px 4px; }
+  .toolbar { gap: 6px; padding: 6px; }
+  .toolbar .lab { display: none; }
+  .hint { display: none; }
+  .bubble { top: calc(var(--gutter) + 120px + env(safe-area-inset-top, 0px)); }
+  .bubble b { font-size: 16px; white-space: normal; }
+  .bubble { width: calc(100vw - 2 * var(--gutter)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .loader .dots span { animation: none; }
+  .chip, .tool { transition: none; }
+}
+</style>
+<!--SPLIT-->
+<div id="stage"></div>
+<div id="labels"></div>
+
+<header class="hud title">
+  <h1>奇想星球</h1>
+  <p>WONDER PLANET · ISSUE #01</p>
+</header>
+
+<div class="hud toggles" role="group" aria-label="显示设置">
+  <button class="chip" id="t-spin" aria-pressed="true">自转</button>
+  <button class="chip" id="t-speed" aria-pressed="false">速度 1×</button>
+  <button class="chip" id="t-dots" aria-pressed="true">网点</button>
+  <button class="chip" id="t-labels" aria-pressed="true">城市名</button>
+</div>
+
+<div class="hud bubble" id="bubble" hidden>
+  <div class="txt"><b id="b-name">—</b><span id="b-info">—</span></div>
+  <button id="b-exit">回到全景</button>
+</div>
+
+<div class="hud hint" id="hint">
+  <kbd>拖拽</kbd> 旋转星球 · <kbd>滚轮/双指</kbd> 缩放<br>
+  一直放大会降落到地面 · <kbd>双击</kbd> 降落到指定位置<br>
+  <kbd>单击</kbd> 飞机、汽车、轮船等即可跟随
+</div>
+
+<nav class="hud toolbar" aria-label="跟随">
+  <span class="lab">跟随：</span>
+  <button class="tool" data-k="plane"><i style="background:#ffffff"></i>飞机</button>
+  <button class="tool" data-k="car"><i style="background:#ff6b6b"></i>汽车</button>
+  <button class="tool" data-k="boat"><i style="background:#4cc9f0"></i>轮船</button>
+  <button class="tool" data-k="balloon"><i style="background:#ffd23f"></i>热气球</button>
+  <button class="tool" data-k="rocket"><i style="background:#ff8c42"></i>火箭</button>
+  <button class="tool" data-k="ufo"><i style="background:#b8f36b"></i>UFO</button>
+  <button class="tool" data-k="space"><i style="background:#c9c3ff"></i>太空</button>
+  <button class="tool home" id="t-home">全景</button>
+</nav>
+
+<div class="loader" id="loader"><div><div class="dots"><span></span><span></span><span></span></div><span id="load-msg">正在给星球上色…</span></div></div>
+
+<script>
+setTimeout(function () {
+  if (window.__planetReady) return;
+  var m = document.getElementById('load-msg');
+  if (m && m.className !== 'err') { m.className = 'err'; m.textContent = '3D 引擎还没加载完成。如果一直停在这里，请检查网络后刷新页面（需要访问 cdn.jsdelivr.net）。'; }
+}, 25000);
+</script>
+<script type="module">
+/*__CODE__*/
+</script>

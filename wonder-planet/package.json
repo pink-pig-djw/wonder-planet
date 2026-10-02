@@ -1,0 +1,16 @@
+{
+  "name": "wonder-planet",
+  "version": "1.0.0",
+  "description": "奇想星球 · 卡通漫画风 Three.js 3D 星球",
+  "scripts": {
+    "build": "node build.mjs --min"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "esbuild": "^0.28.2",
+    "three": "^0.170.0"
+  },
+  "type": "module"
+}
